@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@import "./frontend/styles/base.css";
+
+@import "./frontend/styles/login.css";
+@import "./frontend/styles/dashboard.css";
+@import "./frontend/styles/settings.css";
+@import "./frontend/styles/products-orders.css";
+@import "./frontend/styles/charts.css";
+@import "./frontend/styles/orders.css";
+
+@import "./frontend/styles/responsive.css";
