@@ -1,5 +1,5 @@
+import { useGetIdentity, useNotification } from "@refinedev/core";
 import { useEffect, useRef, useState } from "react";
-import { useGetIdentity, useNotification } from "@refinedev/core";;
 import { Camera, Save, KeyRound, Eye, EyeOff } from "lucide-react";
 import {
   getProfile,
