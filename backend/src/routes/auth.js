@@ -9,6 +9,8 @@ import { requireAuth } from "../middleware.js";
 
 const router = Router();
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function usernameFromEmail(email) {
   const at = email.indexOf("@");
   return at > 0 ? email.slice(0, at) : email;
@@ -123,8 +125,31 @@ router.patch("/profile", requireAuth, async (req, res, next) => {
     if (firstName !== undefined) update.first_name = firstName;
     if (middleInitial !== undefined) update.middle_initial = middleInitial;
     if (lastName !== undefined) update.last_name = lastName;
-    if (email !== undefined) update.email = email.trim().toLowerCase();
     if (avatarUrl !== undefined) update.avatar_url = avatarUrl;
+
+    if (email !== undefined) {
+      const normalizedEmail = String(email).trim().toLowerCase();
+      if (!EMAIL_REGEX.test(normalizedEmail)) {
+        return res
+          .status(400)
+          .json({ error: "Please enter a valid email address." });
+      }
+
+      const { data: duplicate, error: dupErr } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", normalizedEmail)
+        .neq("id", req.user.id)
+        .maybeSingle();
+      if (dupErr) throw dupErr;
+      if (duplicate) {
+        return res
+          .status(409)
+          .json({ error: "That email is already in use by another account." });
+      }
+
+      update.email = normalizedEmail;
+    }
 
     const { data: user, error } = await supabase
       .from("users")
