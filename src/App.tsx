@@ -7,7 +7,6 @@ import routerProvider, {
   UnsavedChangesNotifier,
   DocumentTitleHandler,
 } from "@refinedev/react-router";
-import { dataProvider } from "./backend/data";
 import { authProvider } from "./backend/auth";
 import { useNotificationProvider } from "./frontend/components/refine-ui/notification/use-notification-provider";
 import { Toaster } from "./frontend/components/refine-ui/notification/toaster";
@@ -30,14 +29,12 @@ function App() {
       <RefineKbarProvider>
         <ThemeProvider>
           <Refine
-            dataProvider={dataProvider}
             authProvider={authProvider}
             notificationProvider={useNotificationProvider()}
             routerProvider={routerProvider}
               options={{
                 syncWithLocation: true,
                 warnWhenUnsavedChanges: true,
-                projectId: "qLedav-z4lJY5-ly2aJh",
               }}
               resources={[
                 {

@@ -24,43 +24,9 @@ import {
   getStats,
   type Order,
   type WrapUsage,
+  type WrapSummary,
 } from "@/backend/wrapmate-store";
-
-type ChartColors = {
-  chart1: string;
-  chart2: string;
-  grid: string;
-  text: string;
-};
-
-function readChartColors(): ChartColors {
-  if (typeof window === "undefined") {
-    return { chart1: "#6d4ad8", chart2: "#9b7ff0", grid: "#e5e7eb", text: "#6b7280" };
-  }
-  const styles = getComputedStyle(document.documentElement);
-  const read = (name: string, fallback: string) =>
-    styles.getPropertyValue(name).trim() || fallback;
-  return {
-    chart1: read("--chart-1", "#6d4ad8"),
-    chart2: read("--chart-2", "#9b7ff0"),
-    grid: read("--border", "#e5e7eb"),
-    text: read("--muted-foreground", "#6b7280"),
-  };
-}
-
-function useChartColors(): ChartColors {
-  const [colors, setColors] = useState<ChartColors>(() => readChartColors());
-  useEffect(() => {
-    const observer = new MutationObserver(() => setColors(readChartColors()));
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "style", "data-theme"],
-    });
-    setColors(readChartColors());
-    return () => observer.disconnect();
-  }, []);
-  return colors;
-}
+import { useChartColors } from "@/frontend/hooks/use-chart-colors";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -68,14 +34,24 @@ export default function Dashboard() {
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [wrapUsage, setWrapUsage] = useState<WrapUsage[]>([]);
+  const [wrapSummary, setWrapSummary] = useState<WrapSummary>({
+    totalUsed: 0,
+    averageLength: 0,
+  });
 
   useEffect(() => {
     getOrders()
       .then(setOrders)
       .catch(() => setOrders([]));
     getStats()
-      .then((s) => setWrapUsage(s.wrapUsage))
-      .catch(() => setWrapUsage([]));
+      .then((s) => {
+        setWrapUsage(s.wrapUsage);
+        setWrapSummary(s.wrapSummary);
+      })
+      .catch(() => {
+        setWrapUsage([]);
+        setWrapSummary({ totalUsed: 0, averageLength: 0 });
+      });
   }, []);
 
   const tooltipStyle = {
@@ -88,22 +64,13 @@ export default function Dashboard() {
 
   const totalOrders = orders.length;
 
-  const totalWrapUsedCm =
-    Math.round(
-      orders.reduce((sum, o) => sum + o.length * o.quantity, 0) * 10
-    ) / 10;
-
-  const avgWrapLengthCm =
-    totalOrders > 0
-      ? Math.round(
-          (orders.reduce((sum, o) => sum + o.length, 0) / totalOrders) * 10
-        ) / 10
-      : 0;
-
+  // Bubble wrap stats reflect completed orders only, matching the chart below.
+  // Values come straight from /api/stats (wrapSummary) so the cards and chart
+  // never disagree.
   const stats = {
     totalOrders,
-    totalWrapUsedCm,
-    avgWrapLengthCm,
+    totalWrapUsedCm: wrapSummary.totalUsed,
+    avgWrapLengthCm: wrapSummary.averageLength,
   };
 
   const recentActivity = [...orders]
@@ -156,7 +123,7 @@ export default function Dashboard() {
           <div>
             <span>Bubble Wrap Used</span>
             <strong>{stats.totalWrapUsedCm.toLocaleString()} cm</strong>
-            <small>Total dispensed</small>
+            <small>Completed orders</small>
           </div>
         </div>
 
@@ -167,7 +134,7 @@ export default function Dashboard() {
           <div>
             <span>Avg. Wrap Length</span>
             <strong>{stats.avgWrapLengthCm} cm</strong>
-            <small>Per order</small>
+            <small>Per completed order</small>
           </div>
         </div>
       </section>

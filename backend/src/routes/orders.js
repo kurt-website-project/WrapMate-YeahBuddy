@@ -1,14 +1,14 @@
 import { Router } from "express";
 import { supabase, nextCounter } from "../supabase.js";
 import { requireAuth } from "../middleware.js";
+import { pad } from "../helpers.js";
 
 const router = Router();
 
 const PACKAGING_ALLOWANCE = 5;
 
-function pad(num, size) {
-  return String(num).padStart(size, "0");
-}
+const ORDER_STATUSES = ["Pending", "Processing", "Completed"];
+const PROTECTION_LEVELS = [1, 2, 3];
 
 function calculateLength(width, height, protection) {
   const value = 2 * (width + height) * protection + PACKAGING_ALLOWANCE;
@@ -52,11 +52,25 @@ router.get("/", requireAuth, async (_req, res, next) => {
 
 router.post("/", requireAuth, async (req, res, next) => {
   try {
-    const { customer, productId, protection, quantity } = req.body;
-    if (!customer || !productId || !protection || !quantity) {
+    const { customer, productId } = req.body;
+    if (!customer || !productId || req.body.protection == null || req.body.quantity == null) {
       return res
         .status(400)
         .json({ error: "customer, productId, protection and quantity are required." });
+    }
+
+    const quantity = Number(req.body.quantity);
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return res
+        .status(400)
+        .json({ error: "quantity must be a whole number of 1 or more." });
+    }
+
+    const protection = Number(req.body.protection);
+    if (!PROTECTION_LEVELS.includes(protection)) {
+      return res
+        .status(400)
+        .json({ error: "protection must be 1, 2 or 3." });
     }
 
     const { data: product, error: pErr } = await supabase
@@ -110,6 +124,11 @@ router.post("/", requireAuth, async (req, res, next) => {
 router.patch("/:rowId", requireAuth, async (req, res, next) => {
   try {
     const { status } = req.body;
+    if (!ORDER_STATUSES.includes(status)) {
+      return res
+        .status(400)
+        .json({ error: `status must be one of ${ORDER_STATUSES.join(", ")}.` });
+    }
     const { data, error } = await supabase
       .from("orders")
       .update({ status })

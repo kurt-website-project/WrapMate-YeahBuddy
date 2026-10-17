@@ -1,11 +1,35 @@
 import { Router } from "express";
 import { supabase, nextCounter } from "../supabase.js";
 import { requireAuth } from "../middleware.js";
+import { pad } from "../helpers.js";
 
 const router = Router();
 
-function pad(num, size) {
-  return String(num).padStart(size, "0");
+// Validates the numeric product fields. Returns an error message string, or
+// null when every provided field is valid. `partial` allows PATCH to skip
+// fields that were not supplied.
+function validateProductNumbers({ width, height, cost, price }, { partial } = {}) {
+  const checks = [
+    { key: "width", value: width, positive: true },
+    { key: "height", value: height, positive: true },
+    { key: "cost", value: cost, positive: false },
+    { key: "price", value: price, positive: false },
+  ];
+
+  for (const { key, value, positive } of checks) {
+    if (value === undefined && partial) continue;
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      return `${key} must be a valid number.`;
+    }
+    if (positive && num <= 0) {
+      return `${key} must be greater than 0.`;
+    }
+    if (!positive && num < 0) {
+      return `${key} cannot be negative.`;
+    }
+  }
+  return null;
 }
 
 function mapProduct(p) {
@@ -41,6 +65,18 @@ router.post("/", requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: "Name, width and height are required." });
     }
 
+    const normalizedCost = cost ?? 0;
+    const normalizedPrice = price ?? 0;
+    const validationError = validateProductNumbers({
+      width,
+      height,
+      cost: normalizedCost,
+      price: normalizedPrice,
+    });
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
     const seq = await nextCounter("product_seq");
     const sku = `WM-PROD-${pad(seq, 3)}`;
 
@@ -49,10 +85,10 @@ router.post("/", requireAuth, async (req, res, next) => {
       .insert({
         sku,
         name,
-        width,
-        height,
-        cost: cost ?? 0,
-        price: price ?? 0,
+        width: Number(width),
+        height: Number(height),
+        cost: Number(normalizedCost),
+        price: Number(normalizedPrice),
         image_url: image ?? "",
       })
       .select("*")
@@ -68,12 +104,21 @@ router.post("/", requireAuth, async (req, res, next) => {
 router.patch("/:id", requireAuth, async (req, res, next) => {
   try {
     const { name, width, height, cost, price, image } = req.body;
+
+    const validationError = validateProductNumbers(
+      { width, height, cost, price },
+      { partial: true }
+    );
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
     const update = {};
     if (name !== undefined) update.name = name;
-    if (width !== undefined) update.width = width;
-    if (height !== undefined) update.height = height;
-    if (cost !== undefined) update.cost = cost;
-    if (price !== undefined) update.price = price;
+    if (width !== undefined) update.width = Number(width);
+    if (height !== undefined) update.height = Number(height);
+    if (cost !== undefined) update.cost = Number(cost);
+    if (price !== undefined) update.price = Number(price);
     if (image !== undefined) update.image_url = image;
 
     const { data, error } = await supabase

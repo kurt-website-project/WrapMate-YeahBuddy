@@ -21,6 +21,7 @@ export default function Products() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingSku, setEditingSku] = useState("");
   const [saving, setSaving] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   async function reload() {
     try {
@@ -178,14 +179,17 @@ export default function Products() {
     }
   }
 
-  async function handleDelete(id: string, productName: string) {
+  async function confirmDelete() {
+    if (!productToDelete) return;
+    const removed = productToDelete;
+    setProductToDelete(null);
     try {
-      await deleteProduct(id);
+      await deleteProduct(removed.id);
       await reload();
       open?.({
         type: "success",
         message: "Product deleted",
-        description: `${productName} has been removed.`,
+        description: `${removed.name} has been removed.`,
       });
     } catch (err) {
       open?.({
@@ -289,7 +293,7 @@ export default function Products() {
                         <button
                           type="button"
                           className="wm-icon-btn wm-danger"
-                          onClick={() => handleDelete(product.id, product.name)}
+                          onClick={() => setProductToDelete(product)}
                           aria-label={`Delete ${product.name}`}
                         >
                           <Trash2 />
@@ -482,6 +486,58 @@ export default function Products() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {productToDelete && (
+        <div
+          className="wm-modal-overlay"
+          onClick={() => setProductToDelete(null)}
+        >
+          <div
+            className="wm-modal wm-modal-sm"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="wm-modal-header">
+              <h2>Delete product?</h2>
+              <button
+                type="button"
+                className="wm-icon-btn"
+                onClick={() => setProductToDelete(null)}
+                aria-label="Close"
+              >
+                <X />
+              </button>
+            </div>
+
+            <div className="wm-modal-body">
+              <p className="wm-confirm-text">
+                Are you sure you want to delete{" "}
+                <strong>{productToDelete.name}</strong> ({productToDelete.sku})?
+                This action cannot be undone.
+              </p>
+
+              <div className="wm-modal-footer wm-confirm-actions">
+                <button
+                  type="button"
+                  className="wm-secondary-btn"
+                  onClick={() => setProductToDelete(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="wm-danger-btn"
+                  onClick={confirmDelete}
+                >
+                  <Trash2 />
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

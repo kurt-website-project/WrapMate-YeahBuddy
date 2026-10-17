@@ -83,6 +83,7 @@ export const SignInForm = () => {
                 id="email"
                 type="email"
                 placeholder=""
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -93,6 +94,8 @@ export const SignInForm = () => {
             >
               <Label htmlFor="password">Password</Label>
               <InputPassword
+                id="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
