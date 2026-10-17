@@ -57,7 +57,6 @@ export function Sidebar() {
   );
 }
 
-
 function SidebarHeader() {
   return (
     <ShadcnSidebarHeader
@@ -82,7 +81,6 @@ function SidebarHeader() {
     </ShadcnSidebarHeader>
   );
 }
-
 
 type FooterIdentity = {
   username?: string;
@@ -209,7 +207,6 @@ function SidebarFooter() {
   );
 }
 
-
 type MenuItemProps = {
   item: TreeMenuItem;
   selectedKey?: string;
@@ -299,8 +296,7 @@ function SidebarItemLink({ item, selectedKey }: MenuItemProps) {
   const isSelected = item.key === selectedKey;
   const { isMobile, setOpenMobile } = useSidebar();
 
-  // On mobile the sidebar is an off-canvas drawer; close it automatically after
-  // the user picks a page so it doesn't stay covering the content.
+  // Sa mobile view nag aautomatic close yung side bar
   const handleNavigate = () => {
     if (isMobile) {
       setOpenMobile(false);

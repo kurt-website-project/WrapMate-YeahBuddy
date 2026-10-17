@@ -100,7 +100,6 @@ function App() {
                   <Route path="/settings" element={<Settings />} />
                 </Route>
 
-
                 <Route
                   element={
                     <Authenticated
