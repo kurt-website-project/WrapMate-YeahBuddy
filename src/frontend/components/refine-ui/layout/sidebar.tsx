@@ -13,6 +13,7 @@ import {
   SidebarContent as ShadcnSidebarContent,
   SidebarHeader as ShadcnSidebarHeader,
   SidebarFooter as ShadcnSidebarFooter,
+  useSidebar,
 } from "@/frontend/components/ui/sidebar";
 import {
   Collapsible,
@@ -56,7 +57,6 @@ export function Sidebar() {
   );
 }
 
-
 function SidebarHeader() {
   return (
     <ShadcnSidebarHeader
@@ -81,7 +81,6 @@ function SidebarHeader() {
     </ShadcnSidebarHeader>
   );
 }
-
 
 type FooterIdentity = {
   username?: string;
@@ -208,7 +207,6 @@ function SidebarFooter() {
   );
 }
 
-
 type MenuItemProps = {
   item: TreeMenuItem;
   selectedKey?: string;
@@ -296,7 +294,23 @@ function SidebarItemCollapsible({ item, selectedKey }: MenuItemProps) {
 
 function SidebarItemLink({ item, selectedKey }: MenuItemProps) {
   const isSelected = item.key === selectedKey;
-  return <SidebarButton item={item} isSelected={isSelected} asLink={true} />;
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // Sa mobile view nag aautomatic close yung side bar
+  const handleNavigate = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
+  return (
+    <SidebarButton
+      item={item}
+      isSelected={isSelected}
+      asLink={true}
+      onClick={handleNavigate}
+    />
+  );
 }
 
 function getDisplayName(item: TreeMenuItem) {

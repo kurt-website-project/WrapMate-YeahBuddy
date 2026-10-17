@@ -1,5 +1,4 @@
 import { useRefineOptions } from "@refinedev/core";
-import { ThemeToggle } from "@/frontend/components/refine-ui/theme/theme-toggle";
 import { useSidebar, SidebarTrigger } from "@/frontend/components/ui/sidebar";
 import { cn } from "@/frontend/lib/utils";
 
@@ -78,8 +77,6 @@ function MobileHeader() {
           {title.text}
         </h2>
       </div>
-
-      <ThemeToggle className={cn("h-8", "w-8")} />
     </header>
   );
 }
