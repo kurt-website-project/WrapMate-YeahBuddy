@@ -35,6 +35,20 @@ function App() {
               options={{
                 syncWithLocation: true,
                 warnWhenUnsavedChanges: true,
+                title: {
+                  text: "WrapMate",
+                  icon: (
+                    <img
+                      src="/logo-mark.png"
+                      alt="WrapMate"
+                      style={{
+                        height: 24,
+                        width: 24,
+                        objectFit: "contain",
+                      }}
+                    />
+                  ),
+                },
               }}
               resources={[
                 {
@@ -105,7 +119,15 @@ function App() {
               <Toaster />
               <RefineKbar />
               <UnsavedChangesNotifier />
-              <DocumentTitleHandler />
+              <DocumentTitleHandler
+                handler={({ resource, action }) => {
+                  const label = resource?.meta?.label ?? resource?.name;
+                  if (label && action) {
+                    return `${label} | WrapMate`;
+                  }
+                  return "WrapMate";
+                }}
+              />
             </Refine>
         </ThemeProvider>
       </RefineKbarProvider>
