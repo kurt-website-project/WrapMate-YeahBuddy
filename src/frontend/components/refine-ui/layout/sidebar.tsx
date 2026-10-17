@@ -13,6 +13,7 @@ import {
   SidebarContent as ShadcnSidebarContent,
   SidebarHeader as ShadcnSidebarHeader,
   SidebarFooter as ShadcnSidebarFooter,
+  useSidebar,
 } from "@/frontend/components/ui/sidebar";
 import {
   Collapsible,
@@ -296,7 +297,24 @@ function SidebarItemCollapsible({ item, selectedKey }: MenuItemProps) {
 
 function SidebarItemLink({ item, selectedKey }: MenuItemProps) {
   const isSelected = item.key === selectedKey;
-  return <SidebarButton item={item} isSelected={isSelected} asLink={true} />;
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // On mobile the sidebar is an off-canvas drawer; close it automatically after
+  // the user picks a page so it doesn't stay covering the content.
+  const handleNavigate = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
+  return (
+    <SidebarButton
+      item={item}
+      isSelected={isSelected}
+      asLink={true}
+      onClick={handleNavigate}
+    />
+  );
 }
 
 function getDisplayName(item: TreeMenuItem) {
