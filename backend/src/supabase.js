@@ -14,19 +14,13 @@ export const supabase = createClient(url ?? "", serviceKey ?? "", {
 });
 
 export async function nextCounter(name) {
+  // Atomic increment via the Postgres next_counter() function (see schema.sql):
+  // a single UPDATE ... RETURNING, so concurrent requests never get the same
+  // sequence value. .single() unwraps the scalar the function returns.
   const { data, error } = await supabase
-    .from("counters")
-    .select("value")
-    .eq("name", name)
+    .rpc("next_counter", { p_name: name })
     .single();
   if (error) throw error;
 
-  const next = (data?.value ?? 0) + 1;
-  const { error: updateError } = await supabase
-    .from("counters")
-    .update({ value: next })
-    .eq("name", name);
-  if (updateError) throw updateError;
-
-  return next;
+  return data;
 }

@@ -1,0 +1,81 @@
+From 01ba122c2c3dc674c8cc240a43b9f2709e04919a Mon Sep 17 00:00:00 2001
+From: isko <iskojuanatas@gmail.com>
+Date: Sat, 17 Oct 2026 05:28:59 +0000
+Subject: [PATCH 5/7] prevent duplicate order codes and skus
+
+---
+ backend/schema.sql      | 31 +++++++++++++++++++++++++++++++
+ backend/src/supabase.js | 16 +++++-----------
+ 2 files changed, 36 insertions(+), 11 deletions(-)
+
+diff --git a/backend/schema.sql b/backend/schema.sql
+index 8aa9088..e81c7b2 100644
+--- a/backend/schema.sql
++++ b/backend/schema.sql
+@@ -56,3 +56,34 @@ insert into counters (name, value) values ('product_seq', 0)
+   on conflict (name) do nothing;
+ insert into counters (name, value) values ('order_seq', 0)
+   on conflict (name) do nothing;
++
++-- Enforce uniqueness on generated identifiers so a race can never persist two
++-- orders with the same order_code or two products with the same sku. Wrapped in
++-- DO blocks because Postgres has no "add constraint if not exists"; this makes
++-- the script safe to re-run.
++do $$
++begin
++  if not exists (
++    select 1 from pg_constraint where conname = 'orders_order_code_key'
++  ) then
++    alter table orders add constraint orders_order_code_key unique (order_code);
++  end if;
++end $$;
++
++do $$
++begin
++  if not exists (
++    select 1 from pg_constraint where conname = 'products_sku_key'
++  ) then
++    alter table products add constraint products_sku_key unique (sku);
++  end if;
++end $$;
++
++-- Atomic, idempotent counter increment. A single UPDATE ... RETURNING is
++-- executed as one statement, so concurrent callers each receive a distinct
++-- value and can never collide on WM-001 / WM-PROD-001.
++create or replace function next_counter(p_name text) returns int
++  language sql
++as $$
++  update counters set value = value + 1 where name = p_name returning value;
++$$;
+diff --git a/backend/src/supabase.js b/backend/src/supabase.js
+index 458b87a..0450de2 100644
+--- a/backend/src/supabase.js
++++ b/backend/src/supabase.js
+@@ -14,19 +14,13 @@ export const supabase = createClient(url ?? "", serviceKey ?? "", {
+ });
+ 
+ export async function nextCounter(name) {
++  // Atomic increment via the Postgres next_counter() function (see schema.sql):
++  // a single UPDATE ... RETURNING, so concurrent requests never get the same
++  // sequence value. .single() unwraps the scalar the function returns.
+   const { data, error } = await supabase
+-    .from("counters")
+-    .select("value")
+-    .eq("name", name)
++    .rpc("next_counter", { p_name: name })
+     .single();
+   if (error) throw error;
+ 
+-  const next = (data?.value ?? 0) + 1;
+-  const { error: updateError } = await supabase
+-    .from("counters")
+-    .update({ value: next })
+-    .eq("name", name);
+-  if (updateError) throw updateError;
+-
+-  return next;
++  return data;
+ }
+-- 
+2.50.1
+
