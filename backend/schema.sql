@@ -56,3 +56,34 @@ insert into counters (name, value) values ('product_seq', 0)
   on conflict (name) do nothing;
 insert into counters (name, value) values ('order_seq', 0)
   on conflict (name) do nothing;
+
+-- Enforce uniqueness on generated identifiers so a race can never persist two
+-- orders with the same order_code or two products with the same sku. Wrapped in
+-- DO blocks because Postgres has no "add constraint if not exists"; this makes
+-- the script safe to re-run.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'orders_order_code_key'
+  ) then
+    alter table orders add constraint orders_order_code_key unique (order_code);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'products_sku_key'
+  ) then
+    alter table products add constraint products_sku_key unique (sku);
+  end if;
+end $$;
+
+-- Atomic, idempotent counter increment. A single UPDATE ... RETURNING is
+-- executed as one statement, so concurrent callers each receive a distinct
+-- value and can never collide on WM-001 / WM-PROD-001.
+create or replace function next_counter(p_name text) returns int
+  language sql
+as $$
+  update counters set value = value + 1 where name = p_name returning value;
+$$;
